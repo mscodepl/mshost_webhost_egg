@@ -1,26 +1,21 @@
 #!/bin/bash
-
-# Delay to ensure any needed services are up
 sleep 1
 
-# Navigate to the container home directory
 cd /home/container
 
-# Clean up the tmp directory to prevent using stale data
-echo "Cleaning /home/container/tmp/ directory..."
-rm -rf /home/container/tmp/*
+# Usuń tymczasowe pliki
+CLEANUP_COMMANDS="rm -rf /home/container/tmp/*"
+
+# Start PHP-FPM i Nginx przed pozostałymi komendami
+PRE_STARTUP_COMMANDS="/usr/sbin/php-fpm8 --fpm-config /home/container/php-fpm/php-fpm.conf --daemonize && /usr/sbin/nginx -c /home/container/nginx/nginx.conf -p /home/container/"
 
 # Replace Startup Variables
 MODIFIED_STARTUP=$(eval echo $(echo ${STARTUP} | sed -e 's/{{/${/g' -e 's/}}/}/g'))
 
-echo "⟳ Starting services..."
+# Dodaj komendy CLEANUP i PRE_STARTUP na początku MODIFIED_STARTUP
+MODIFIED_STARTUP="${CLEANUP_COMMANDS} && ${PRE_STARTUP_COMMANDS} && ${MODIFIED_STARTUP}"
 
-# Starting PHP-FPM
-/usr/sbin/php-fpm8 --fpm-config /home/container/php-fpm/php-fpm.conf --daemonize
+echo ":/home/container$ ${MODIFIED_STARTUP}"
 
-# Starting Nginx
-/usr/sbin/nginx -c /home/container/nginx/nginx.conf -p /home/container/
-
-# Execute the modified startup command
-echo "Executing server startup command..."
-${MODIFIED_STARTUP}
+# Run the Server
+eval ${MODIFIED_STARTUP}
